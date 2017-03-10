@@ -15,12 +15,12 @@ import com.google.common.collect.Lists;
 public class SamplePlugin extends Plugin {
     @Override
     public String name() {
-        return "SamplePlugin";
+        return "TruenoElasticSearchPlugin";
     }
 
     @Override
     public String description() {
-        return "This is a sample plugin.";
+        return "Trueno ElasticSearch External API Plugin.";
     }
 
     public void onModule(final RestModule module) {
