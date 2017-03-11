@@ -2,17 +2,25 @@ package org.trueno.elasticsearch.plugin;
 
 import java.util.Collection;
 
-import org.trueno.elasticsearch.plugin.module.SampleModule;
-import org.trueno.elasticsearch.plugin.rest.SampleRestAction;
-import org.trueno.elasticsearch.plugin.service.SampleService;
+import org.elasticsearch.common.settings.Settings;
+import org.trueno.elasticsearch.plugin.module.ExternalAPIModule;
+import org.trueno.elasticsearch.plugin.service.APIService;
 import org.elasticsearch.common.component.LifecycleComponent;
 import org.elasticsearch.common.inject.Module;
 import org.elasticsearch.plugins.Plugin;
-import org.elasticsearch.rest.RestModule;
 
 import com.google.common.collect.Lists;
 
-public class SamplePlugin extends Plugin {
+public class TruenoExternalAPI extends Plugin {
+
+
+    private final Settings settings;
+
+    public TruenoExternalAPI(Settings settings) {
+        this.settings = settings;
+
+    }
+
     @Override
     public String name() {
         return "TruenoElasticSearchPlugin";
@@ -23,14 +31,10 @@ public class SamplePlugin extends Plugin {
         return "Trueno ElasticSearch External API Plugin.";
     }
 
-    public void onModule(final RestModule module) {
-        module.addRestAction(SampleRestAction.class);
-    }
-
     @Override
     public Collection<Module> nodeModules() {
         final Collection<Module> modules = Lists.newArrayList();
-        modules.add(new SampleModule());
+        modules.add(new ExternalAPIModule());
         return modules;
     }
 
@@ -38,7 +42,7 @@ public class SamplePlugin extends Plugin {
     @Override
     public Collection<Class<? extends LifecycleComponent>> nodeServices() {
         final Collection<Class<? extends LifecycleComponent>> services = Lists.newArrayList();
-        services.add(SampleService.class);
+        services.add(APIService.class);
         return services;
     }
 }

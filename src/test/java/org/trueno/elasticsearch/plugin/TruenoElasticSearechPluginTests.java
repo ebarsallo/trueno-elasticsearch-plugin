@@ -2,18 +2,9 @@ package org.trueno.elasticsearch.plugin;
 
 import static org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner.newConfigs;
 
-import java.io.BufferedWriter;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.net.HttpURLConnection;
 import java.net.InetSocketAddress;
-import java.util.Map;
 
 import org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner;
-import org.codelibs.elasticsearch.runner.net.Curl;
-import org.codelibs.elasticsearch.runner.net.CurlException;
-import org.codelibs.elasticsearch.runner.net.CurlRequest;
-import org.codelibs.elasticsearch.runner.net.CurlResponse;
 import org.elasticsearch.action.admin.indices.alias.get.GetAliasesResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
@@ -29,7 +20,7 @@ import org.elasticsearch.search.sort.SortBuilders;
 
 import junit.framework.TestCase;
 
-public class SamplePluginTests extends TestCase {
+public class TruenoElasticSearechPluginTests extends TestCase {
 
     private ElasticsearchClusterRunner runner;
 
@@ -41,15 +32,14 @@ public class SamplePluginTests extends TestCase {
         runner.onBuild(new ElasticsearchClusterRunner.Builder() {
             @Override
             public void build(final int number, final Builder settingsBuilder) {
+                settingsBuilder.put("trueno.api.hostname", "localhost");
+                settingsBuilder.put("trueno.api.port", 8008);
                 settingsBuilder.put("http.cors.enabled", true);
                 settingsBuilder.put("http.cors.allow-origin", "*");
                 settingsBuilder.putArray("discovery.zen.ping.unicast.hosts", "localhost:9301-9399");
-                settingsBuilder.put("plugin.types", "SamplePlugin");
+                settingsBuilder.put("plugin.types", "org.trueno.elasticsearch.plugin.TruenoExternalAPI");
             }
-        }).build(
-                newConfigs()
-                        .clusterName("es-cl-run-" + System.currentTimeMillis())
-                        .numOfNode(3));
+        }).build(newConfigs().clusterName("es-cl-run-" + System.currentTimeMillis()).numOfNode(1));
 
         // wait for yellow status
         runner.ensureYellow();
@@ -66,22 +56,22 @@ public class SamplePluginTests extends TestCase {
     public void test_plugin() throws Exception {
 
         // check if runner has nodes
-        assertEquals(3, runner.getNodeSize());
+        assertEquals(1, runner.getNodeSize());
         assertNotNull(runner.getNode(0));
-        assertNotNull(runner.getNode(1));
-        assertNotNull(runner.getNode(2));
+//        assertNotNull(runner.getNode(1));
+//        assertNotNull(runner.getNode(2));
         assertNotNull(runner.getNode("Node 1"));
-        assertNotNull(runner.getNode("Node 2"));
-        assertNotNull(runner.getNode("Node 3"));
+//        assertNotNull(runner.getNode("Node 2"));
+//        assertNotNull(runner.getNode("Node 3"));
         assertNull(runner.getNode("Node 4"));
         assertNotNull(runner.node());
 
         assertNotNull(runner.client());
 
         // check if a master node exists
-        assertNotNull(runner.masterNode());
-        assertNotNull(runner.nonMasterNode());
-        assertFalse(runner.masterNode() == runner.nonMasterNode());
+//        assertNotNull(runner.masterNode());
+//        assertNotNull(runner.nonMasterNode());
+//        assertFalse(runner.masterNode() == runner.nonMasterNode());
 
         // check if a cluster service exists
         assertNotNull(runner.clusterService());
@@ -141,11 +131,11 @@ public class SamplePluginTests extends TestCase {
 
         final Node node = runner.node();
 
-        try (CurlResponse curlResponse = Curl.get(node, "/" + index + "/_sample").execute()) {
-            final String content = curlResponse.getContentAsString();
-            assertNotNull(content);
-            assertEquals(index, curlResponse.getContentAsMap().get("index"));
-        }
+//        try (CurlResponse curlResponse = Curl.get(node, "/" + index + "/_sample").execute()) {
+//            final String content = curlResponse.getContentAsString();
+//            assertNotNull(content);
+//            assertEquals(index, curlResponse.getContentAsMap().get("index"));
+//        }
 
         // update alias
         final String alias = index + "_alias";
@@ -221,81 +211,81 @@ public class SamplePluginTests extends TestCase {
             assertEquals(10, searchResponse.getHits().hits().length);
         }
 
-        // http access
-        // get
-        try (CurlResponse curlResponse = Curl.get(node, "/_search")
-                .param("q", "*:*").execute()) {
-            final String content = curlResponse.getContentAsString();
-            assertNotNull(content);
-            assertTrue(content.contains("total"));
-            final Map<String, Object> map = curlResponse.getContentAsMap();
-            assertNotNull(map);
-            assertEquals("false", map.get("timed_out").toString());
-        }
-
-        // post
-        try (CurlResponse curlResponse = Curl
-                .post(node, "/" + index + "/" + type)
-                .body("{\"id\":\"2000\",\"msg\":\"test 2000\"}").execute()) {
-            final Map<String, Object> map = curlResponse.getContentAsMap();
-            assertNotNull(map);
-            assertEquals("true", map.get("created").toString());
-        }
-
-        // put
-        try (CurlResponse curlResponse = Curl
-                .put(node, "/" + index + "/" + type + "/2001")
-                .body("{\"id\":\"2001\",\"msg\":\"test 2001\"}").execute()) {
-            final Map<String, Object> map = curlResponse.getContentAsMap();
-            assertNotNull(map);
-            assertEquals("true", map.get("created").toString());
-        }
-
-        // delete
-        try (CurlResponse curlResponse = Curl.delete(node,
-                "/" + index + "/" + type + "/2001").execute()) {
-            final Map<String, Object> map = curlResponse.getContentAsMap();
-            assertNotNull(map);
-            assertEquals("true", map.get("found").toString());
-        }
-
-        // post
-        try (CurlResponse curlResponse = Curl
-                .post(node, "/" + index + "/" + type)
-                .onConnect(new CurlRequest.ConnectionBuilder() {
-                    @Override
-                    public void onConnect(CurlRequest curlRequest,
-                            HttpURLConnection connection) {
-                        connection.setDoOutput(true);
-                        try (BufferedWriter writer = new BufferedWriter(
-                                new OutputStreamWriter(connection
-                                        .getOutputStream(), "UTF-8"))) {
-                            writer.write("{\"id\":\"2002\",\"msg\":\"test 2002\"}");
-                            writer.flush();
-                        } catch (IOException e) {
-                            throw new CurlException("Failed to write data.", e);
-                        }
-                    }
-                }).execute()) {
-            final Map<String, Object> map = curlResponse.getContentAsMap();
-            assertNotNull(map);
-            assertEquals("true", map.get("created").toString());
-        }
+//        // http access
+//        // get
+//        try (CurlResponse curlResponse = Curl.get(node, "/_search")
+//                .param("q", "*:*").execute()) {
+//            final String content = curlResponse.getContentAsString();
+//            assertNotNull(content);
+//            assertTrue(content.contains("total"));
+//            final Map<String, Object> map = curlResponse.getContentAsMap();
+//            assertNotNull(map);
+//            assertEquals("false", map.get("timed_out").toString());
+//        }
+//
+//        // post
+//        try (CurlResponse curlResponse = Curl
+//                .post(node, "/" + index + "/" + type)
+//                .body("{\"id\":\"2000\",\"msg\":\"test 2000\"}").execute()) {
+//            final Map<String, Object> map = curlResponse.getContentAsMap();
+//            assertNotNull(map);
+//            assertEquals("true", map.get("created").toString());
+//        }
+//
+//        // put
+//        try (CurlResponse curlResponse = Curl
+//                .put(node, "/" + index + "/" + type + "/2001")
+//                .body("{\"id\":\"2001\",\"msg\":\"test 2001\"}").execute()) {
+//            final Map<String, Object> map = curlResponse.getContentAsMap();
+//            assertNotNull(map);
+//            assertEquals("true", map.get("created").toString());
+//        }
+//
+//        // delete
+//        try (CurlResponse curlResponse = Curl.delete(node,
+//                "/" + index + "/" + type + "/2001").execute()) {
+//            final Map<String, Object> map = curlResponse.getContentAsMap();
+//            assertNotNull(map);
+//            assertEquals("true", map.get("found").toString());
+//        }
+//
+//        // post
+//        try (CurlResponse curlResponse = Curl
+//                .post(node, "/" + index + "/" + type)
+//                .onConnect(new CurlRequest.ConnectionBuilder() {
+//                    @Override
+//                    public void onConnect(CurlRequest curlRequest,
+//                            HttpURLConnection connection) {
+//                        connection.setDoOutput(true);
+//                        try (BufferedWriter writer = new BufferedWriter(
+//                                new OutputStreamWriter(connection
+//                                        .getOutputStream(), "UTF-8"))) {
+//                            writer.write("{\"id\":\"2002\",\"msg\":\"test 2002\"}");
+//                            writer.flush();
+//                        } catch (IOException e) {
+//                            throw new CurlException("Failed to write data.", e);
+//                        }
+//                    }
+//                }).execute()) {
+//            final Map<String, Object> map = curlResponse.getContentAsMap();
+//            assertNotNull(map);
+//            assertEquals("true", map.get("created").toString());
+//        }
 
         // close 1 node
         final Node node1 = runner.node();
         node1.close();
-        final Node node2 = runner.node();
-        assertTrue(node1 != node2);
+//        final Node node2 = runner.node();
+//        assertTrue(node1 != node2);
         assertTrue(runner.getNode(0).isClosed());
-        assertFalse(runner.getNode(1).isClosed());
-        assertFalse(runner.getNode(2).isClosed());
+//        assertFalse(runner.getNode(1).isClosed());
+//        assertFalse(runner.getNode(2).isClosed());
 
         // restart a node
         assertTrue(runner.startNode(0));
-        assertFalse(runner.startNode(1));
-        assertFalse(runner.startNode(2));
+//        assertFalse(runner.startNode(1));
+//        assertFalse(runner.startNode(2));
 
-        runner.ensureGreen();
+        //runner.ensureGreen();
     }
 }
