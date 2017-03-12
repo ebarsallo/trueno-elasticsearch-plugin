@@ -5,6 +5,8 @@ import static org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner.newCo
 import java.net.InetSocketAddress;
 
 import org.codelibs.elasticsearch.runner.ElasticsearchClusterRunner;
+import org.codelibs.elasticsearch.runner.net.Curl;
+import org.codelibs.elasticsearch.runner.net.CurlResponse;
 import org.elasticsearch.action.admin.indices.alias.get.GetAliasesResponse;
 import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.SearchResponse;
@@ -20,7 +22,7 @@ import org.elasticsearch.search.sort.SortBuilders;
 
 import junit.framework.TestCase;
 
-public class TruenoElasticSearechPluginTests extends TestCase {
+public class TruenoElasticSearchPluginTests extends TestCase {
 
     private ElasticsearchClusterRunner runner;
 
@@ -53,6 +55,10 @@ public class TruenoElasticSearechPluginTests extends TestCase {
         runner.clean();
     }
 
+    /**
+     * Test web socket connection
+     * @throws Exception
+     */
     public void test_plugin() throws Exception {
 
         // check if runner has nodes
@@ -288,4 +294,29 @@ public class TruenoElasticSearechPluginTests extends TestCase {
 
         //runner.ensureGreen();
     }
+
+    /**
+     * Test Hello Rest action
+     * @throws Exception
+     */
+    public void test_hello() throws Exception {
+
+        final Node node = runner.node();
+
+        // Saying `hello`
+        try (CurlResponse curlResponse = Curl.get(node, "/_hello").execute()) {
+            System.out.println("--> " + curlResponse.getContentAsString());
+            final String content = curlResponse.getContentAsString();
+            assertNotNull(content);
+            assertEquals(content, "Hello, world!");
+        }
+
+        try (CurlResponse curlResponse = Curl.get(node, "/_hello?who=Elasticsearch").execute()) {
+            System.out.println("--> " + curlResponse.getContentAsString());
+            final String content = curlResponse.getContentAsString();
+            assertNotNull(content);
+            assertEquals(content, "Hello, Elasticsearch!");
+        }
+    }
+
 }

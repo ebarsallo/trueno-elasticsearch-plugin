@@ -3,6 +3,7 @@ package org.trueno.elasticsearch.plugin;
 import java.util.Collection;
 
 import org.elasticsearch.common.settings.Settings;
+import org.trueno.elasticsearch.plugin.module.ExampleRestModule;
 import org.trueno.elasticsearch.plugin.module.ExternalAPIModule;
 import org.trueno.elasticsearch.plugin.service.APIService;
 import org.elasticsearch.common.component.LifecycleComponent;
@@ -35,6 +36,7 @@ public class TruenoExternalAPI extends Plugin {
     public Collection<Module> nodeModules() {
         final Collection<Module> modules = Lists.newArrayList();
         modules.add(new ExternalAPIModule());
+        modules.add(new ExampleRestModule());
         return modules;
     }
 
